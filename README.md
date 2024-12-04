@@ -1,6 +1,4 @@
-# [Official] FedBABU: Toward Enhanced Representation for Federated Image Classification
-
-This repository is the official implementation of "FedBABU: Towards Enhanced Representation for Federated Image Classification" paper presented in ICLR 2022. Thanks to the contributors. [[Paper](https://openreview.net/forum?id=HuaYQfggn5u)]
+FedBADAH: Federated Learning Algorithm with Body Aggregation and Dynamic Aggregation of Head
 
 ## Installation
 
@@ -15,23 +13,13 @@ Pillow 4.1.1</br>
 
 The next step is to clone the repository:
 ```bash
-git clone https://github.com/jhoon-oh/FedBABU.git
+git clone https://github.com/changzi00/FedBADAH.git
 ```
 
 ## Data
 
 We run FedBABU and other FL algorithms experiments on CIFAR10 and CIFAR100 using 4convNet, mobileNet, and ResNet.
 
-## Script for running
-
-Please refer to ./scripts folder.
-
-## Contact
-Feel free to contact us if you have any questions:)
-
-- Jaehoon Oh: jhoon.oh@kaist.ac.kr
-- SangMook Kim: sangmook.kim@kaist.ac.kr
-
 # Acknowledgements
 
-This codebase was adapted from https://github.com/pliang279/LG-FedAvg.
+This codebase was adapted from [https://github.com/pliang279/LG-FedAvg.](https://github.com/jhoon-oh/FedBABU)
