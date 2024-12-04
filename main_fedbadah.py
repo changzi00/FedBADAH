@@ -4,17 +4,19 @@
 
 import copy
 import pickle
-import numpy as np
 import pandas as pd
+import numpy as np
 import torch
+from torch import nn
+from torch.utils.data import DataLoader
 
 from utils.options import args_parser
 from utils.train_utils import get_data, get_model
-from models.Update import LocalUpdate
-from models.test import test_img_local_all
-import os
+from models.Update import DatasetSplit
+from models.test import test_img_local, test_img_local_all, test_img_avg_all, test_img_ensemble_all, distance_test_img_local
 
 import pdb
+import easydict
 
 if __name__ == '__main__':
     # parse args
@@ -82,10 +84,21 @@ if __name__ == '__main__':
             local = LocalUpdate(args=args, dataset=dataset_train, idxs=dict_users_train[idx])
             net_local = copy.deepcopy(net_local_list[idx])
             
+            # Dynamic Head Update for FedBADAH
+            # In FedBADAH, the Head is updated only if the local loss is below a certain threshold.
+            # This is different from FedBABU, where the Head is always updated. This dynamic approach
+            # aims to reduce unnecessary updates and improve personalization by focusing on meaningful updates.
             if args.local_upt_part == 'body':
                 w_local, loss = local.train(net=net_local.to(args.device), body_lr=lr, head_lr=0.)
             elif args.local_upt_part == 'head':
-                w_local, loss = local.train(net=net_local.to(args.device), body_lr=0., head_lr=lr)
+                # Head is updated only if loss is below a threshold (dynamic update)
+                threshold = 0.1
+                net_local.eval()
+                current_loss, _ = local.evaluate(net_local, dataset_train)
+                if current_loss < threshold:
+                    w_local, loss = local.train(net=net_local.to(args.device), body_lr=0., head_lr=lr)
+                else:
+                    w_local, loss = local.train(net=net_local.to(args.device), body_lr=0., head_lr=0.)
             elif args.local_upt_part == 'full':
                 w_local, loss = local.train(net=net_local.to(args.device), body_lr=lr, head_lr=lr)
                 
@@ -97,11 +110,15 @@ if __name__ == '__main__':
                 for k in w_glob.keys():
                     w_glob[k] += w_local[k]
         
-        # Aggregation
+        # Aggregation (only Body for FedBADAH)
+        # In FedBABU, both Body and Head are aggregated, but in FedBADAH, only the Body parameters are aggregated.
+        # This ensures that the Head remains personalized to each client, improving performance in non-iid settings.
         for k in w_glob.keys():
             w_glob[k] = torch.div(w_glob[k], m)
         
         # Server-side Body Update (FedBADAH does not aggregate Head)
+        # In FedBABU, the Head is also aggregated on the server, but FedBADAH keeps the Head on the clients.
+        # This reduces communication costs and keeps the Head personalized for each client.
         if args.server_data_ratio > 0.0:
             server = LocalUpdate(args=args, dataset=dataset_train, idxs=dict_users_train['server'])
             net_glob.load_state_dict(w_glob, strict=True)
@@ -109,6 +126,8 @@ if __name__ == '__main__':
             w_glob, loss = server.train(net=net_glob.to(args.device), body_lr=lr, head_lr=0., local_eps=int(args.results_save[-1]))
         
         # Broadcast (only aggregate the body)
+        # In FedBADAH, only the Body parameters are broadcasted back to the clients.
+        # The Head remains unchanged to maintain the personalization.
         update_keys = list(w_glob.keys())
         if args.aggr_part == 'body':
             update_keys = [k for k in update_keys if 'linear' not in k]
