@@ -1,4 +1,4 @@
-FedBADAH: Federated Learning Algorithm with Body Aggregation and Dynamic Aggregation of Head
+## FedBADAH: Federated Learning Algorithm with Body Aggregation and Dynamic Aggregation of Head
 
 ## Installation
 
